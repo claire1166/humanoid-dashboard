@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人形机器人市场情报看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+:root{
+  --bg:#f7f8fa; --card:#ffffff; --line:#e6e9ef; --text:#1a2233; --sub:#5b6478;
+  --acc:#2f6f6a; --acc2:#8fd0c8; --accent:#e8614f; --hover:#eef3f2;
+  --chip:#e8f2f0; --ok:#2f8f6a; --warn:#d98a2b;
+}
+[data-mode="dark"]{
+  --bg:#11151c; --card:#181d27; --line:#2a3140; --text:#e8ecf3; --sub:#9aa4b8;
+  --acc:#7fd0c6; --acc2:#3a6b66; --accent:#ff8a78; --hover:#212836;
+  --chip:#22302e; --ok:#5cd6a0; --warn:#f0b35f;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.55;transition:background .25s,color .25s}
+.header{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+.header-in{max-width:1440px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-size:17px;font-weight:700;letter-spacing:.3px}
+.badge{font-size:12px;color:var(--acc);background:var(--chip);border:1px solid var(--acc2);border-radius:20px;padding:2px 10px;white-space:nowrap}
+.updated{font-size:12px;color:var(--sub);margin-left:auto;white-space:nowrap}
+.mode-switch{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.mode-switch button{border:none;background:transparent;color:var(--sub);padding:4px 12px;font-size:12px;cursor:pointer}
+.mode-switch button.on{background:var(--acc);color:#fff}
+nav{max-width:1440px;margin:0 auto;padding:0 20px;display:flex;gap:4px;overflow-x:auto}
+nav button{border:none;background:transparent;color:var(--sub);padding:11px 16px;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+nav button.on{color:var(--text);border-bottom-color:var(--acc);font-weight:600}
+main{max-width:1440px;margin:0 auto;padding:16px 20px 40px}
+.view{display:none}
+.view.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card h3 .tag{font-size:11px;color:var(--sub);font-weight:400;background:var(--hover);padding:1px 8px;border-radius:10px}
+.grid{display:grid;gap:12px}
+.kpi-grid{grid-template-columns:repeat(4,1fr)}
+.c2{grid-template-columns:1fr 1fr}
+.c3{grid-template-columns:1fr 1fr 1fr}
+.c4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1100px){.kpi-grid,.c4{grid-template-columns:1fr 1fr}.c3{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.kpi-grid,.c2,.c3,.c4{grid-template-columns:1fr}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .t{font-size:12px;color:var(--sub)}
+.kpi .v{font-size:24px;font-weight:700;margin:4px 0;color:var(--text)}
+.kpi .v b{color:var(--acc)}
+.kpi .s{font-size:11px;color:var(--sub);line-height:1.45}
+.chart{width:100%;height:300px}
+.chart.sm{height:240px}
+.legend-note{font-size:11px;color:var(--sub);margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--sub);font-weight:500;background:var(--hover);position:sticky;top:0}
+tbody tr:hover{background:var(--hover)}
+.tbl-wrap{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:8px}
+.tbl-wrap::-webkit-scrollbar{height:6px;width:6px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.tab-select{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:4px 10px;font-size:12px}
+.chip{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;background:var(--chip);color:var(--acc);margin-right:4px}
+.news-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.news-card .d{font-size:12px;color:var(--sub)}
+.news-card .tt{font-weight:600;margin:3px 0}
+.news-card .f{font-size:12px;color:var(--sub);line-height:1.5}
+.tl{position:relative;padding-left:18px;margin:6px 0}
+.tl:before{content:"";position:absolute;left:5px;top:4px;bottom:-6px;width:1px;background:var(--line)}
+.tl:last-child:before{display:none}
+.tl .dot{position:absolute;left:0;top:6px;width:11px;height:11px;border-radius:50%;background:var(--acc);border:2px solid var(--card);box-shadow:0 0 0 1px var(--acc2)}
+.tl .dt{font-size:12px;color:var(--acc);font-weight:600}
+.tl .de{font-size:13px;color:var(--text);margin-top:1px}
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.filter-bar input{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;width:240px;max-width:100%}
+.filter-bar .fb{border:1px solid var(--line);background:var(--card);color:var(--sub);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer}
+.filter-bar .fb.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.state-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.state-item .go{color:var(--acc);font-weight:600}
+.note{font-size:11px;color:var(--sub);margin-top:8px}
+.foot{text-align:center;color:var(--sub);font-size:12px;padding:18px 0 8px}
+.seg{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--card);color:var(--sub);border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer}
+.seg button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-in">
+    <div class="brand"><h1>人形机器人市场情报看板</h1><span class="badge" id="badge"></span></div>
+    <div class="updated" id="updated"></div>
+    <div class="mode-switch"><button id="m-light" class="on" data-m="light">雾青</button><button id="m-dark" data-m="dark">深色</button></div>
+  </div>
+  <nav id="nav">
+    <button data-v="market" class="on">市场规模</button>
+    <button data-v="compete">竞争格局</button>
+    <button data-v="scene">应用场景</button>
+    <button data-v="finance">融资情况</button>
+    <button data-v="policy">技术政策</button>
+    <button data-v="news">资讯中心</button>
+  </nav>
+</div>
+<main>
+  <section class="view on" id="v-market"></section>
+  <section class="view" id="v-compete"></section>
+  <section class="view" id="v-scene"></section>
+  <section class="view" id="v-finance"></section>
+  <section class="view" id="v-policy"></section>
+  <section class="view" id="v-news"></section>
+  <div class="foot">数据来源：公开信息 · 多机构口径已分别标注 · 芯视佳专用</div>
+</main>
+<script src="data.js"></script>
+<script>
+const D = window.DASHBOARD_DATA;
+const $ = s => document.querySelector(s);
+const esc = s => String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let charts = [];
+function mkChart(cid, opt){
+  const el = document.getElementById(cid);
+  const old = echarts.getInstanceByDom(el); if(old) old.dispose();
+  const c = echarts.init(el); c.setOption(opt); charts.push(c); return c;
+}
+function onResize(){ charts.forEach(c=>c.resize()); }
+window.addEventListener('resize', onResize);
+
+// ===== 导航 =====
+document.getElementById('nav').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('on', x===b));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('v-'+b.dataset.v).classList.add('on');
+  setTimeout(()=>{ charts.forEach(c=>c.resize()); }, 60);
+});
+// ===== 模式切换 =====
+function setMode(m){
+  document.body.dataset.mode = m;
+  document.getElementById('m-light').classList.toggle('on', m==='light');
+  document.getElementById('m-dark').classList.toggle('on', m==='dark');
+  setTimeout(()=>charts.forEach(c=>c.resize()), 60);
+}
+document.getElementById('m-light').onclick = ()=>setMode('light');
+document.getElementById('m-dark').onclick = ()=>setMode('dark');
+
+// ===== 头部 =====
+document.getElementById('badge').textContent = D.meta.badge;
+document.getElementById('updated').textContent = '数据更新：' + D.meta.updated;
+
+// ===== 市场规模 =====
+function renderMarket(){
+  const v = document.getElementById('v-market');
+  const K = D.market;
+  v.innerHTML = `
+  <div class="grid kpi-grid" style="margin-bottom:12px">
+    ${K.kpi.map(k=>`<div class="kpi"><div class="t">${k.t}</div><div class="v">${k.v}</div><div class="s">${k.s}</div></div>`).join('')}
+  </div>
+  <div class="grid c2">
+    <div class="card"><h3>全球人形机器人市场规模 <span class="tag">按机构口径切换</span></h3>
+      <div class="seg" id="seg-gsize"></div><div class="chart" id="ch-gsize"></div>
+      <div class="legend-note" id="note-gsize"></div></div>
+    <div class="card"><h3>全球人形机器人出货量 <span class="tag">按机构口径切换</span></h3>
+      <div class="seg" id="seg-gship"></div><div class="chart" id="ch-gship"></div>
+      <div class="legend-note" id="note-gship"></div></div>
+    <div class="card"><h3>中国人形机器人市场规模 <span class="tag">按机构口径切换</span></h3>
+      <div class="seg" id="seg-csize"></div><div class="chart" id="ch-csize"></div>
+      <div class="legend-note" id="note-csize"></div></div>
+    <div class="card"><h3>中国人形机器人出货量 <span class="tag">按机构口径切换</span></h3>
+      <div class="seg" id="seg-cship"></div><div class="chart" id="ch-cship"></div>
+      <div class="legend-note" id="note-cship"></div></div>
+  </div>`;
+
+  // 全球市场规模 口径
+  const gsize = {
+    'Ken Research': {y:['2020','2021','2022','2023','2024'], v:[7.7,9.2,11.6,14.8,20.1], u:'亿美元', note:'Ken Research《Global Humanoid Robot Market》，市场规模口径'},
+    'BCC Research': {y:['2020'], v:[21], u:'亿美元', note:'BCC Research，广义市场规模口径（2020）'},
+    '艾媒咨询': {y:['2024'], v:[34], u:'亿美元', note:'艾媒咨询（iiMedia），产业规模口径（2024）'},
+    'IDC(收入)': {y:['2025'], v:[4.4], u:'亿美元', note:'IDC，2025年全球收入口径'},
+    'GGII(远期)': {y:['2030'], v:[200], u:'亿美元', note:'GGII 2030年全球市场规模预测'}
+  };
+  seg('seg-gsize', Object.keys(gsize), k=>bar('ch-gsize', gsize[k], '亿美元', '#2f6f6a', 'note-gsize', k));
+  // 全球出货量 口径
+  const gship = {
+    'Ken Research': {y:['2020','2021','2022','2023','2024'], v:[0.29,0.40,0.56,0.76,1.05], u:'万台', note:'Ken Research，全球商业出货量'},
+    'IDC': {y:['2025'], v:[1.77], u:'万台', note:'IDC，2025全球出货17700台'},
+    '赛迪': {y:['2025'], v:[1.7], u:'万台', note:'赛迪，2025全球出货约1.7万台'},
+    'Omdia': {y:['2025'], v:[1.3], u:'万台', note:'Omdia，2025全球出货约1.3万台'},
+    'SAG(2026H1)': {y:['2026H1'], v:[1.91], u:'万台', note:'Smart Analytics Global，2026上半年出货19100台'},
+    '2026预测': {y:['2026'], v:[6.0], u:'万台', note:'SAG 6万 · 中商6.25万 · Counterpoint 5万+ · TrendForce 5.1万 · 德银近5万（多家预测取中位展示）'}
+  };
+  seg('seg-gship', Object.keys(gship), k=>bar('ch-gship', gship[k], '万台', '#3a7ca5', 'note-gship', k));
+  // 中国市场规模
+  const csize = {
+    '信通院(2025)': {y:['2025'], v:[85], u:'亿元', note:'中国信通院《人形机器人产业发展白皮书(2025)》，人民币口径'},
+    '赛迪(2025)': {y:['2025'], v:[15.5], u:'亿元', note:'赛迪《2025年人形机器人市场研究报告》，人民币口径'},
+    '新战略(2025)': {y:['2025'], v:[90], u:'亿元', note:'新战略咨询，广义市场规模90亿（整机60亿）'},
+    '中商(2026F)': {y:['2026'], v:[34], u:'亿元', note:'中商产业研究院 2026年预测'},
+    '中投(2026F)': {y:['2026'], v:[90], u:'亿元', note:'中投顾问研报 2026年预测'}
+  };
+  seg('seg-csize', Object.keys(csize), k=>bar('ch-csize', csize[k], '亿元', '#c08a2e', 'note-csize', k));
+  // 中国出货量
+  const cship = {
+    '信通院(2025)': {y:['2025'], v:[1.2], u:'万台', note:'中国信通院，2025中国出货约1.2万台'},
+    '中商(2025)': {y:['2025'], v:[1.44], u:'万台', note:'中商产业研究院，2025中国出货1.44万台（占全球84.7%）'},
+    '新战略(2025)': {y:['2025'], v:[2.0], u:'万台', note:'新战略咨询，2025中国出货约2万台'},
+    '百人会(2026H1)': {y:['2026H1'], v:[4.0], u:'万台', note:'百人会，2026上半年出货4万台+'},
+    '中商(2026F)': {y:['2026'], v:[3.8], u:'万台', note:'中商产业研究院 2026年预测'},
+    '摩根士丹利(2026F)': {y:['2026'], v:[5.0], u:'万台', note:'摩根士丹利 2026年预测'},
+    '联盟(2026F)': {y:['2026'], v:[8.5], u:'万台', note:'人形机器人场景应用联盟 2026年预测（新浪财经）'}
+  };
+  seg('seg-cship', Object.keys(cship), k=>bar('ch-cship', cship[k], '万台', '#8a5fbf', 'note-cship', k));
+}
+function seg(id, keys, fn){
+  const el = document.getElementById(id); el.innerHTML = '';
+  keys.forEach((k,i)=>{
+    const b = document.createElement('button');
+    b.textContent = k; if(i===0) b.classList.add('on');
+    b.onclick = ()=>{ el.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); fn(k); };
+    el.appendChild(b);
+  });
+  if(keys.length) fn(keys[0]);
+}
+function bar(cid, d, unit, color, nid, note){
+  mkChart(cid, {
+    grid:{left:46,right:20,top:26,bottom:30},
+    tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+    xAxis:{type:'category', data:d.y, axisLine:{lineStyle:{color:'#9aa4b8'}}, axisLabel:{color:'#9aa4b8'}},
+    yAxis:{type:'value', name:unit, nameTextStyle:{color:'#9aa4b8'}, axisLabel:{color:'#9aa4b8'}, splitLine:{lineStyle:{color:'#e6e9ef'}}},
+    series:[{type:'bar', data:d.v, itemStyle:{color, borderRadius:[4,4,0,0]}, barMaxWidth:44, label:{show:true, position:'top', fontSize:11, color:'#9aa4b8'}}]
+  });
+  const n = document.getElementById(nid); if(n) n.textContent = note;
+}
+
+// ===== 竞争格局 =====
+function renderCompete(){
+  const C = D.compete, v = document.getElementById('v-compete');
+  v.innerHTML = `
+  <div class="grid c4" style="margin-bottom:12px">
+    ${D.compete_news.map(n=>`<div class="kpi"><div class="t">${n[0]}</div><div class="v" style="font-size:15px;line-height:1.5">${n[1]}</div><div class="s">${n[2]}</div></div>`).join('')}
+  </div>
+  <div class="grid c3" style="margin-bottom:12px">
+    <div class="card"><h3>企业出货量份额 <span class="tag" id="tag-share">赛迪口径(2025)</span></h3>
+      <div class="seg" id="seg-share"></div><div class="chart" id="ch-share"></div>
+      <div class="legend-note">赛迪：CR3 61.8% · CR5 73.6% · 前六合计 74.1%；Omdia：智元39% · 宇树32% · 优必选7%</div></div>
+    <div class="card"><h3>出货量与集中度 <span class="tag">2025全球</span></h3>
+      <div class="grid c2" style="margin-bottom:8px">
+        <div class="kpi"><div class="t">全球总出货量</div><div class="v">1.77<b>万台</b></div><div class="s">IDC 17700台</div></div>
+        <div class="kpi"><div class="t">多机构口径</div><div class="v" style="font-size:15px">1.3~1.8<b>万台</b></div><div class="s">赛迪1.7万 · Omdia 1.3万 · 瑞银1.86万</div></div>
+        <div class="kpi"><div class="t">CR3(赛迪)</div><div class="v">61.8<b>%</b></div><div class="s">宇树+智元+乐聚</div></div>
+        <div class="kpi"><div class="t">CR5(赛迪)</div><div class="v">73.6<b>%</b></div><div class="s">前五家合计</div></div>
+      </div></div>
+    <div class="card"><h3>2025出货同比 <span class="tag">IDC口径</span></h3>
+      <div class="chart" id="ch-yoy"></div>
+      <div class="legend-note">IDC：2024年约2900台 → 2025年17700台，同比增长508%</div></div>
+  </div>
+  <div class="card" style="margin-bottom:12px"><h3>企业产品矩阵 <span class="tag">22家本体企业</span></h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>企业</th><th>产品</th><th>类型</th><th>售价</th><th>状态</th><th>发布时间</th><th>出货/订单</th></tr></thead>
+      <tbody>${C.products.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td><td>${p[2]}</td><td>${p[3]}</td><td>${p[4]}</td><td>${p[5]}</td><td>${p[6]}</td></tr>`).join('')}</tbody>
+    </table></div></div>
+  <div class="grid c2" style="margin-bottom:12px">
+    <div class="card"><h3>产品价格格局 <span class="tag">人民币口径</span></h3>
+      <div class="chart" id="ch-price"></div>
+      <div class="legend-note">1万以内：Bumi 9998元；1-10万：R1 2.99万/G1 8.5万/PM01 8.8万/灵犀X2 9.8万；10-30万：Luna 29.8万；30-60万：夸父30.81万/Gen3≈35万/H1/远征A2；60万+：GR-2 12.5万美元≈88.8万/Atlas 42万美元</div></div>
+    <div class="card"><h3>企业竞争状态 <span class="tag">22家 · 状态机</span></h3>
+      <div style="max-height:320px;overflow:auto">
+        ${C.states.map(s=>`<div class="state-item"><span>${s[0]}</span><span class="go">${s[1]}</span></div>`).join('')}
+      </div>
+      <div class="note">阶段链：研发期 → 产品化 → 供应链导入 → 小批量 → 量产 → 扩产；依据公开资讯更新</div></div>
+  </div>
+  <div class="card"><h3>竞争格局时间轴 <span class="tag">2023-2026</span></h3>
+    <div style="max-height:380px;overflow:auto">
+    ${C.timeline.map(t=>`<div class="tl"><span class="dot"></span><div class="dt">${t[0]}</div><div class="de">${t[1]}</div></div>`).join('')}
+    </div></div>`;
+  // 份额扇形图（口径切换）
+  const shares = {
+    '赛迪口径': {d:C.share_saidi, tag:'赛迪口径(2025)', other:100-74.1},
+    'Omdia口径': {d:C.share_omdia, tag:'Omdia口径(2025)', other:100-78}
+  };
+  function drawShare(k){
+    const s = shares[k];
+    document.getElementById('tag-share').textContent = s.tag;
+    mkChart('ch-share', {
+      tooltip:{trigger:'item', formatter:'{b}: {c}%'},
+      legend:{bottom:0, textStyle:{color:'#9aa4b8'}, itemWidth:12, itemHeight:8},
+      series:[{type:'pie', radius:['42%','68%'], center:['50%','44%'],
+        itemStyle:{borderRadius:6, borderColor:getComputedStyle(document.body).getPropertyValue('--card')},
+        label:{color:'#9aa4b8', fontSize:11, formatter:'{b}\n{d}%'},
+        data:[...s.d.map(x=>({name:x.e, value:x.v})), {name:'其他', value:s.other, itemStyle:{color:'#d5dae3'}}]}]
+    });
+  }
+  seg('seg-share', Object.keys(shares), drawShare); drawShare('赛迪口径');
+  // 同比
+  mkChart('ch-yoy', {
+    tooltip:{trigger:'axis'},
+    grid:{left:46,right:20,top:20,bottom:26},
+    xAxis:{type:'category', data:['2024','2025'], axisLabel:{color:'#9aa4b8'}, axisLine:{lineStyle:{color:'#9aa4b8'}}},
+    yAxis:{type:'value', name:'台', nameTextStyle:{color:'#9aa4b8'}, axisLabel:{color:'#9aa4b8'}, splitLine:{lineStyle:{color:'#e6e9ef'}}},
+    series:[{type:'bar', data:[2900,17700], itemStyle:{color:'#2f6f6a', borderRadius:[4,4,0,0]}, barMaxWidth:56, label:{show:true, position:'top', fontSize:11, color:'#9aa4b8', formatter:p=>p.value.toLocaleString()}}]
+  });
+  // 价格带
+  mkChart('ch-price', {
+    tooltip:{trigger:'axis', axisPointer:{type:'shadow'}, formatter:p=>p[0].name+'：'+p[0].value+' 款'},
+    grid:{left:110,right:30,top:16,bottom:24},
+    xAxis:{type:'value', axisLabel:{color:'#9aa4b8'}, splitLine:{lineStyle:{color:'#e6e9ef'}}},
+    yAxis:{type:'category', inverse:true, data:C.prices.map(p=>p.band), axisLabel:{color:'#9aa4b8'}, axisLine:{lineStyle:{color:'#9aa4b8'}}},
+    series:[{type:'bar', data:C.prices.map(p=>p.n), barMaxWidth:30, itemStyle:{color:'#c08a2e', borderRadius:[0,4,4,0]}, label:{show:true, position:'right', color:'#9aa4b8', fontSize:11}}]
+  });
+}
+
+// ===== 应用场景 =====
+function renderScene(){
+  const S = D.scenes, v = document.getElementById('v-scene');
+  v.innerHTML = `
+  <div class="grid c4" style="margin-bottom:12px">
+    ${D.scene_news.map(n=>`<div class="kpi"><div class="t">${n[0]}</div><div class="v" style="font-size:14px;line-height:1.5">${n[1]}</div><div class="s">${n[2]}</div></div>`).join('')}
+  </div>
+  <div class="card" style="margin-bottom:12px"><h3>应用场景全景 <span class="tag">点击场景 → 下方模块联动</span></h3>
+    <div class="grid c4" id="scene-map">
+      ${S.overview.map((o,i)=>`<div class="kpi scene-cell" data-i="${i}" style="cursor:pointer;border:1px solid var(--line)"><div class="t">${o.cat}</div><div class="v" style="font-size:13px;line-height:1.5">${o.sub}</div><div class="s">${o.desc}</div></div>`).join('')}
+    </div></div>
+  <div class="grid c2" style="margin-bottom:12px">
+    <div class="card"><h3>场景出货占比 <span class="tag">2026 · 凤凰网口径</span></h3><div class="chart" id="ch-scene-share"></div>
+      <div class="legend-note">工业制造51% · 商业服务30% · 家庭&lt;5%（凤凰网/具身智能蓝皮书，与高工口径并存标注）</div></div>
+    <div class="card"><h3>场景落地成熟度 <span class="tag">●=当前阶段</span></h3>
+      <div class="tbl-wrap"><table><thead><tr><th>场景</th><th>当前阶段</th><th>概念</th><th>Demo</th><th>Pilot</th><th>小批量</th><th>批量</th><th>规模化</th></tr></thead>
+      <tbody>${S.maturity.map(m=>`<tr><td>${m.cat}</td><td>${m.stage}</td>${m.cells.map(c=>{const h=c.includes('✓')?'✓':'<b>●</b>';return `<td style="color:${c.includes('✓')?'var(--ok)':'var(--acc)'}">${c.includes('✓')?'✓':'●'}</td>`}).join('')}</tr>`).join('')}</tbody></table></div></div>
+  </div>
+  <div class="card" style="margin-bottom:12px"><h3>场景 × 任务 × 产品 <span class="tag">代表性落地项目</span></h3>
+    <div class="tbl-wrap"><table><thead><tr><th>场景</th><th>典型任务</th><th>机器人企业</th><th>产品</th><th>部署阶段</th><th>时间</th></tr></thead>
+    <tbody>${S.tasks.map(t=>`<tr><td>${t[0]}</td><td>${t[1]}</td><td>${t[2]}</td><td>${t[3]}</td><td>${t[4]}</td><td>${t[5]}</td></tr>`).join('')}</tbody></table></div></div>
+  <div class="card"><h3>应用场景时间轴 <span class="tag">2024-2026</span></h3>
+    <div style="max-height:340px;overflow:auto">
+    ${S.timeline.map(t=>`<div class="tl"><span class="dot"></span><div class="dt">${t[0]}</div><div class="de">${t[1]}</div></div>`).join('')}
+    </div></div>`;
+  mkChart('ch-scene-share', {
+    tooltip:{trigger:'item', formatter:'{b}: {c}%'},
+    legend:{bottom:0, textStyle:{color:'#9aa4b8'}, itemWidth:12, itemHeight:8},
+    series:[{type:'pie', radius:['42%','68%'], center:['50%','44%'], itemStyle:{borderRadius:6, borderColor:getComputedStyle(document.body).getPropertyValue('--card')},
+      label:{color:'#9aa4b8', fontSize:11, formatter:'{b}\n{d}%'},
+      data:[{name:'工业制造', value:51, itemStyle:{color:'#2f6f6a'}},{name:'商业服务', value:30, itemStyle:{color:'#3a7ca5'}},{name:'家庭', value:4, itemStyle:{color:'#c08a2e'}},{name:'医疗养老', value:6, itemStyle:{color:'#8a5fbf'}},{name:'教育科研', value:5, itemStyle:{color:'#e8614f'}},{name:'其他', value:4, itemStyle:{color:'#d5dae3'}}]}]
+  });
+  // 场景联动：点击高亮 + 过滤任务表
+  document.querySelectorAll('.scene-cell').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      document.querySelectorAll('.scene-cell').forEach(x=>{x.style.borderColor='var(--line)'; x.style.background='var(--card)';});
+      el.style.borderColor='var(--acc)'; el.style.background='var(--hover)';
+    });
+  });
+}
+
+// ===== 融资情况 =====
+function renderFinance(){
+  const F = D.finance, K = F.kpi_2026, v = document.getElementById('v-finance');
+  const kpis = [
+    {t:'融资事件(2026)', v:K.events+' 笔', s:'披露金额 '+K.disclosed+' 笔'},
+    {t:'融资总额', v:K.total_rmb_100m+' 亿元', s:'披露口径 · 美元1:7.1折算'},
+    {t:'平均单笔', v:K.avg_rmb_100m+' 亿元', s:K.note_avg||''},
+    {t:'获融资企业', v:K.enterprises+' 家', s:'中国 '+(K.china.events||K.china)+'笔 · 海外 '+(K.overseas.events||K.overseas)+'笔'},
+    {t:'最大单笔', v:'426 亿元', s:'软银60亿美元控股1X(待确认·拟议)'},
+    {t:'近30日融资', v:K.last30d.events+' 笔', s:K.last30d.items.map(i=>i.enterprise).join(' · ')}
+  ];
+  v.innerHTML = `
+  <div class="grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:12px">
+    ${kpis.map(k=>`<div class="kpi"><div class="t">${k.t}</div><div class="v" style="font-size:19px">${k.v}</div><div class="s">${k.s}</div></div>`).join('')}
+  </div>
+  <div class="grid c2" style="margin-bottom:12px">
+    <div class="card"><h3>全球融资趋势 <span class="tag">2020-2026</span></h3><div class="chart" id="ch-f-trend"></div>
+      <div class="legend-note">事件数(柱)与披露总额(线) · 2026为截至09-08数据 · 未披露金额不计入总额</div></div>
+    <div class="card"><h3>中国 vs 海外 <span class="tag">2026</span></h3><div class="chart" id="ch-f-region"></div>
+      <div class="legend-note">中国9笔(75%) · 海外3笔(25%)</div></div>
+    <div class="card"><h3>融资轮次结构 <span class="tag">2026</span></h3><div class="chart" id="ch-f-round"></div></div>
+    <div class="card"><h3>资金流向-企业类型 <span class="tag">2026</span></h3><div class="chart" id="ch-f-type"></div>
+      <div class="legend-note">整机企业11笔 · 零部件企业1笔（可切换：企业类型/地区/融资阶段）</div></div>
+  </div>
+  <div class="card" style="margin-bottom:12px"><h3>企业融资排行榜 <span class="tag">累计金额 · 点击表头切换排序</span></h3>
+    <div class="tbl-wrap"><table id="tb-rank"><thead><tr>
+      <th data-k="rank">#</th><th data-k="enterprise">企业</th><th data-k="count">融资次数</th>
+      <th data-k="total_rmb_est">累计融资(亿元)</th><th data-k="last_date">最近时间</th><th>轮次</th></tr></thead>
+      <tbody id="tb-rank-body"></tbody></table></div></div>
+  <div class="card" style="margin-bottom:12px"><h3>最新融资事件 <span class="tag">41笔 · 倒序</span></h3>
+    <div class="tbl-wrap" style="max-height:340px"><table><thead><tr><th>日期</th><th>企业</th><th>金额</th><th>轮次</th><th>投资方</th><th>地区</th><th>类型</th><th>状态</th></tr></thead>
+    <tbody>${F.events_all.map(e=>`<tr><td>${e.date.slice(5)}</td><td>${e.enterprise}</td><td>${e.amount==='未披露'?'未披露'+e.unit:e.amount+(e.unit||'')}</td><td>${e.round}</td><td>${e.investor||'—'}</td><td>${e.region}</td><td>${e.type}</td><td>${e.status}</td></tr>`).join('')}</tbody></table></div></div>
+  <div class="card"><h3>融资时间轴 <span class="tag">重大事件</span></h3>
+    <div style="max-height:360px;overflow:auto">
+    ${D.finance.events_all.filter(e=>['收购','IPO','C轮','Pre-IPO轮','B轮','A轮'].includes(e.round)).slice(-16).map(e=>`<div class="tl"><span class="dot"></span><div class="dt">${e.date} · ${e.enterprise}</div><div class="de">${e.round} ${e.amount==='未披露'?'未披露'+e.unit:e.amount+(e.unit||'')} · ${e.investor||''}</div></div>`).join('')}
+    </div></div>`;
+  // 趋势
+  const Y = F.yearly;
+  mkChart('ch-f-trend', {
+    tooltip:{trigger:'axis'},
+    legend:{data:['事件数','披露总额(亿元)'], textStyle:{color:'#9aa4b8'}, top:0},
+    grid:{left:50,right:50,top:30,bottom:26},
+    xAxis:{type:'category', data:Y.map(y=>y.year), axisLabel:{color:'#9aa4b8'}, axisLine:{lineStyle:{color:'#9aa4b8'}}},
+    yAxis:[{type:'value', name:'事件数', nameTextStyle:{color:'#9aa4b8'}, axisLabel:{color:'#9aa4b8'}, splitLine:{lineStyle:{color:'#e6e9ef'}}},
+           {type:'value', name:'亿元', nameTextStyle:{color:'#9aa4b8'}, axisLabel:{color:'#9aa4b8'}, splitLine:{show:false}}],
+    series:[{name:'事件数', type:'bar', data:Y.map(y=>y.events), itemStyle:{color:'#2f6f6a', borderRadius:[4,4,0,0]}, barMaxWidth:34},
+            {name:'披露总额(亿元)', type:'line', yAxisIndex:1, data:Y.map(y=>+y.total_rmb_100m.toFixed(1)), smooth:true, itemStyle:{color:'#e8614f'}, lineStyle:{width:2.5}}]
+  });
+  // 地区
+  mkChart('ch-f-region', {
+    tooltip:{trigger:'item', formatter:'{b}: {c}笔 ({d}%)'},
+    legend:{bottom:0, textStyle:{color:'#9aa4b8'}, itemWidth:12, itemHeight:8},
+    series:[{type:'pie', radius:['42%','68%'], center:['50%','44%'], itemStyle:{borderRadius:6, borderColor:getComputedStyle(document.body).getPropertyValue('--card')},
+      label:{color:'#9aa4b8', fontSize:11, formatter:'{b}\n{d}%'},
+      data:[{name:'中国', value:F.region_split_2026['中国']||K.china, itemStyle:{color:'#2f6f6a'}},{name:'海外', value:F.region_split_2026['海外']||K.overseas, itemStyle:{color:'#3a7ca5'}}]}]
+  });
+  // 轮次
+  const R = Object.entries(F.round_structure_2026).sort((a,b)=>b[1]-a[1]);
+  mkChart('ch-f-round', {
+    tooltip:{trigger:'item', formatter:'{b}: {c}笔'},
+    legend:{bottom:0, textStyle:{color:'#9aa4b8'}, itemWidth:12, itemHeight:8, type:'scroll'},
+    series:[{type:'pie', radius:['42%','68%'], center:['50%','42%'], itemStyle:{borderRadius:6, borderColor:getComputedStyle(document.body).getPropertyValue('--card')},
+      label:{color:'#9aa4b8', fontSize:11, formatter:'{b} {c}'},
+      data:R.map(([k,v])=>({name:k, value:v}))}]
+  });
+  // 类型
+  mkChart('ch-f-type', {
+    tooltip:{trigger:'item', formatter:'{b}: {c}笔 ({d}%)'},
+    legend:{bottom:0, textStyle:{color:'#9aa4b8'}, itemWidth:12, itemHeight:8},
+    series:[{type:'pie', radius:['42%','68%'], center:['50%','44%'], itemStyle:{borderRadius:6, borderColor:getComputedStyle(document.body).getPropertyValue('--card')},
+      label:{color:'#9aa4b8', fontSize:11, formatter:'{b}\n{d}%'},
+      data:Object.entries(F.type_split).map(([k,v])=>({name:k, value:v}))}]
+  });
+  // 排行表（可排序）
+  let rankSort = 'total_rmb_est';
+  function drawRank(){
+    const rows = [...F.ranking].sort((a,b)=>{
+      if(rankSort==='enterprise') return a.enterprise.localeCompare(b.enterprise,'zh');
+      if(rankSort==='rank') return (a.rank||0)-(b.rank||0);
+      if(rankSort==='count') return b.count-a.count;
+      if(rankSort==='last_date') return b.last_date.localeCompare(a.last_date);
+      return (b.total_rmb_est||0)-(a.total_rmb_est||0);
+    });
+    document.getElementById('tb-rank-body').innerHTML = rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.enterprise}</td><td>${r.count}</td><td style="font-weight:600">${(r.total_rmb_est||0).toFixed(1)}</td><td>${(r.last_date||'').slice(5)}</td><td>${(r.rounds||[]).join('/')}</td></tr>`).join('');
+  }
+  document.querySelectorAll('#tb-rank th').forEach(th=>{
+    th.style.cursor='pointer';
+    th.addEventListener('click', ()=>{ rankSort = th.dataset.k; drawRank(); });
+  });
+  drawRank();
+}
+
+// ===== 技术政策 =====
+function renderPolicy(){
+  const P = D.policy, v = document.getElementById('v-policy');
+  const tech = P.filter(p=>['技术','标准','研发','算力','机器人+'].some(k=>p.title.includes(k)) || (p.sub||'').includes('技术'));
+  const pol  = P.filter(p=>!tech.includes(p));
+  v.innerHTML = `
+  <div class="grid c2">
+    <div class="card"><h3>技术发展 <span class="tag">${tech.length}条</span></h3>
+      ${tech.length? tech.slice(0,40).map(n=>`<div class="tl"><span class="dot"></span><div class="dt">${n.date} · ${esc(n.src)}</div><div class="de">${esc(n.title)}</div></div>`).join('') : '<div class="note">暂无匹配资讯</div>'}
+    </div>
+    <div class="card"><h3>政策资讯 <span class="tag">${pol.length}条</span></h3>
+      ${pol.slice(0,40).map(n=>`<div class="tl"><span class="dot"></span><div class="dt">${n.date} · ${esc(n.src)}</div><div class="de">${esc(n.title)}</div></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ===== 资讯中心 =====
+let newsCat = '全部', newsKw = '';
+function renderNews(){
+  const v = document.getElementById('v-news');
+  if(!v.dataset.inited){
+    v.innerHTML = `
+    <div class="filter-bar">
+      <input id="news-kw" placeholder="搜索标题 / 来源 / 关键词…">
+      <div id="news-cats"></div>
+      <span style="margin-left:auto;font-size:12px;color:var(--sub)" id="news-count"></span>
+    </div>
+    <div class="grid" id="news-list"></div>`;
+    v.dataset.inited = '1';
+    document.getElementById('news-kw').addEventListener('input', e=>{ newsKw = e.target.value.trim(); drawNews(); });
+    const cats = ['全部', ...new Set(D.zixun.map(z=>z.cat))];
+    document.getElementById('news-cats').innerHTML = cats.map(c=>`<button class="fb${c===newsCat?' on':''}" data-c="${c}">${c}</button>`).join('');
+    document.getElementById('news-cats').addEventListener('click', e=>{
+      const b = e.target.closest('.fb'); if(!b) return;
+      newsCat = b.dataset.c;
+      document.querySelectorAll('#news-cats .fb').forEach(x=>x.classList.toggle('on', x===b));
+      drawNews();
+    });
+  }
+  function drawNews(){
+    let list = D.zixun.filter(z=> newsCat==='全部' || z.cat===newsCat);
+    if(newsKw) list = list.filter(z=>(z.title+' '+z.src+' '+z.fact).toLowerCase().includes(newsKw.toLowerCase()));
+    document.getElementById('news-count').textContent = list.length + ' 条';
+    document.getElementById('news-list').innerHTML = list.slice(0,120).map(z=>`
+      <div class="news-card"><div class="d">${z.date} · <span class="chip">${z.cat}</span><span class="chip">${z.level||''}</span>${esc(z.src)}</div>
+      <div class="tt">${esc(z.title)}</div><div class="f">${esc((z.fact||'').slice(0,140))}</div></div>`).join('');
+  }
+  drawNews();
+}
+
+renderMarket();
+renderCompete();
+renderScene();
+renderFinance();
+renderPolicy();
+renderNews();
+</script>
+</body>
+</html>
